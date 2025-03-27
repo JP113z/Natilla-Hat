@@ -17,7 +17,7 @@ export class MenuScene extends Phaser.Scene {
         const width = GameManager.instance.width;
         const height = GameManager.instance.height;
 
-        // Fondo con gradiente o imagen
+        // Fondo
         this.add.image(width / 2, height / 2, 'menuBg').setDisplaySize(width, height);
 
         // Efectos de sonido
@@ -41,7 +41,7 @@ export class MenuScene extends Phaser.Scene {
             }
         }).setOrigin(0.5);
 
-        // Subtítulo con animación
+        // Subtítulo
         const subtitle = this.add.text(width / 2, height / 3 + 90, 'Un juego memorable', {
             fontSize: '32px',
             fontStyle: 'italic',
@@ -64,7 +64,7 @@ export class MenuScene extends Phaser.Scene {
             .setScale(2)
             .setInteractive({ useHandCursor: true });
 
-        // Texto del botón (por si la imagen no lo incluye)
+        // Texto del botón
         const playText = this.add.text(width / 2, height / 2 + 120, 'JUGAR', {
             fontSize: '36px',
             color: '#FFFFFF',
@@ -73,7 +73,7 @@ export class MenuScene extends Phaser.Scene {
             fontFamily: 'Arial Black'
         }).setOrigin(0.5);
 
-        // Efectos hover para el botón
+        // Efectos para el botón
         this.playBtn.on('pointerover', () => {
             this.playBtn.setScale(1.70);
             playText.setScale(0.85);
@@ -89,7 +89,7 @@ export class MenuScene extends Phaser.Scene {
             this.playBtn.setScale(0.75);
             playText.setScale(0.95);
 
-            // Transición con efecto
+            // Transición
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
                 this.menuMusic.stop();
@@ -97,7 +97,7 @@ export class MenuScene extends Phaser.Scene {
             });
         });
 
-        // Créditos o versión en la parte inferior
+        // Versión
         this.add.text(width / 2, height - 40, 'Versión 1.0 · © 2025', {
             fontSize: '16px',
             color: '#AAAAAA',
@@ -106,7 +106,6 @@ export class MenuScene extends Phaser.Scene {
     }
 
     shutdown() {
-        // Detener música al salir de la escena
         this.menuMusic.stop();
     }
 }

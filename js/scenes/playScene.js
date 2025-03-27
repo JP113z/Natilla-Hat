@@ -69,11 +69,6 @@ export class PlayScene extends Phaser.Scene {
         this.physics.add.collider(this.objects.points, this.platform);
         this.physics.add.collider(this.objects.damage, this.platform);
         this.physics.add.collider(this.objects.health, this.platform);
-
-        // Overlap
-        // this.physics.add.overlap(this.player, this.objects.points, this.collectPoint, null, this);
-        // this.physics.add.overlap(this.player, this.objects.damage, this.collectDamage, null, this);
-        // this.physics.add.overlap(this.player, this.objects.health, this.collectHealth, null, this);
     }
 
     update() {

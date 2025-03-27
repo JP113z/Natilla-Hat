@@ -20,7 +20,6 @@ export class Game extends Phaser.Game {
 
         super(config);
 
-        // Opcional: Si prefieres registrar escenas manualmente
         this.scene.add('MenuScene', MenuScene);
         this.scene.add('PlayScene', PlayScene);
         this.scene.add('EndScene', EndScene);
