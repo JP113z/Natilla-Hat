@@ -98,7 +98,7 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // Créditos o versión en la parte inferior
-        this.add.text(width / 2, height - 40, 'Versión 1.0 · © 2023', {
+        this.add.text(width / 2, height - 40, 'Versión 1.0 · © 2025', {
             fontSize: '16px',
             color: '#AAAAAA',
             fontStyle: 'italic'
