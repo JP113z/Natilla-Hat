@@ -1,6 +1,5 @@
 import { hatsManager } from "../hatsManager.js";
 import { GameManager } from "../gameManager.js";
-import { Card } from "../gameObjects/card.js";
 
 export class PlayScene extends Phaser.Scene {
     constructor() {
@@ -19,9 +18,11 @@ export class PlayScene extends Phaser.Scene {
         this.spawnRates = {
             points: 0.6,
             damage: 0.3,
-            health: 0.1
+            health: 0.2
         };
         this.fallSpeed = 100;
+        this.objectsToRemove = [];
+        this.objectScale = 0.1; // Tamaño de los objetos que acen
     }
 
     preload() {
@@ -54,6 +55,10 @@ export class PlayScene extends Phaser.Scene {
         this.player = this.physics.add.sprite(width / 2, height - 100, 'cat');
         this.player.setCollideWorldBounds(true);
 
+        // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
+        this.catWidth = this.player.width;
+        this.catHeight = this.player.height;
+
         // Crear plataforma
         this.platform = this.physics.add.sprite(width / 2, height - 50, 'platform');
         this.platform.setImmovable(true);
@@ -61,19 +66,24 @@ export class PlayScene extends Phaser.Scene {
         // Crear HUD
         this.createHUD();
 
-        // Crear objetos
-        this.spawnObject();
+        // Configurar temporizador para spawn de objetos
+        this.time.addEvent({
+            delay: 1000,
+            callback: this.spawnObject,
+            callbackScope: this,
+            loop: true
+        });
 
         // Colisiones
         this.physics.add.collider(this.player, this.platform);
-        this.physics.add.collider(this.objects.points, this.platform);
-        this.physics.add.collider(this.objects.damage, this.platform);
-        this.physics.add.collider(this.objects.health, this.platform);
     }
 
     update() {
-        this.checkObjectCollisions();
+        // Limpiar objetos que están fuera de la pantalla
+        this.cleanupObjects();
 
+        // Actualizar HUD
+        this.updateHUD();
     }
 
     createHUD() {
@@ -99,30 +109,177 @@ export class PlayScene extends Phaser.Scene {
         );
     }
 
-    spawnObject() {
+    updateHUD() {
+        this.scoreText.setText(`Puntos: ${this.score}`);
+        this.healthText.setText(`Salud: ${this.health}`);
+        this.hatsText.setText(`Sombreros: ${this.hats.length}`);
     }
 
-    checkObjectCollisions() {
+    spawnObject() {
+        const width = GameManager.instance.width;
+        const randomX = Phaser.Math.Between(50, width - 50);
+        const randomType = this.getRandomObjectType();
+
+        let object;
+
+        switch (randomType) {
+            case 'points':
+                object = this.physics.add.sprite(randomX, 0, 'pointObj');
+                object.objectType = 'points';
+                this.objects.points.push(object);
+                break;
+            case 'damage':
+                object = this.physics.add.sprite(randomX, 0, 'damageObj');
+                object.objectType = 'damage';
+                this.objects.damage.push(object);
+                break;
+            case 'health':
+                object = this.physics.add.sprite(randomX, 0, 'healthObj');
+                object.objectType = 'health';
+                this.objects.health.push(object);
+                break;
+        }
+
+        // Ajustar el tamaño del objeto para que sea proporcional al gato
+        this.resizeObject(object);
+
+        // Configurar física del objeto
+        object.body.velocity.y = this.fallSpeed;
+
+        // Colisiones con el jugador
+        this.physics.add.overlap(this.player, object, this.handleObjectCollision, null, this);
+    }
+
+    resizeObject(object) {
+        object.setScale(this.objectScale);
+
+        /*
+        const targetWidth = this.catWidth * 0.6; // 60% del ancho del gato
+        const scaleX = targetWidth / object.width;
+        object.setScale(scaleX);
+        */
+        object.body.setSize(object.width * object.scaleX, object.height * object.scaleY);
+    }
+
+    getRandomObjectType() {
+        const rand = Math.random();
+        if (rand < this.spawnRates.points) {
+            return 'points';
+        } else if (rand < this.spawnRates.points + this.spawnRates.damage) {
+            return 'damage';
+        } else {
+            return 'health';
+        }
+    }
+
+    handleObjectCollision(player, object) {
+        switch (object.objectType) {
+            case 'points':
+                this.collectPoints(object);
+                break;
+            case 'damage':
+                this.takeDamage(object);
+                break;
+            case 'health':
+                this.gainHealth(object);
+                break;
+        }
+    }
+
+    collectPoints(object) {
+        // Sumar un punto al score
+        this.score += 1;
+        this.pointSound.play();
+
+        // Verificar si se obtuvo un sombrero
+        if (this.score % 50 === 0) {
+            this.hats.push(1); // Se agrega cualquier sombrero temporalmente
+        }
+
+        // Remover el objeto
+        this.removeObject(object);
+    }
+
+    takeDamage(object) {
+        // Reducir vida
+        this.health--;
+        this.damageSound.play();
+
+        // Remover el objeto
+        this.removeObject(object);
+    }
+
+    gainHealth(object) {
+        // Recuperar 1 punto de vida, máximo 10
+        this.health = Math.min(this.health + 1, 10);
+        this.healthSound.play();
+
+        // Remover el objeto
+        this.removeObject(object);
+    }
+
+    removeObject(object) {
+        // Marcar para eliminar en el próximo ciclo
+        this.objectsToRemove.push(object);
+    }
+
+    cleanupObjects() {
+        const height = GameManager.instance.height;
+
+        // Eliminar objetos marcados
+        for (const obj of this.objectsToRemove) {
+            // Eliminar de los arrays correspondientes
+            if (obj.objectType === 'points') {
+                this.objects.points = this.objects.points.filter(o => o !== obj);
+            } else if (obj.objectType === 'damage') {
+                this.objects.damage = this.objects.damage.filter(o => o !== obj);
+            } else if (obj.objectType === 'health') {
+                this.objects.health = this.objects.health.filter(o => o !== obj);
+            }
+
+            // Destruir el objeto
+            obj.destroy();
+        }
+        this.objectsToRemove = [];
+
+        // Verificar objetos fuera de pantalla
+        const allObjects = [...this.objects.points, ...this.objects.damage, ...this.objects.health];
+        for (const obj of allObjects) {
+            if (obj.y > height + 50) {
+                this.removeObject(obj);
+            }
+        }
     }
 
     calculatePoints() {
+        return this.score;
     }
 
     getRandomHat() {
+        return 'basic';
     }
 
     applyHatEffects(hatType) {
     }
 
     countHats(type) {
+        return this.hats.filter(h => h === type).length;
     }
 
     showHatMessage(hatType) {
     }
 
     increaseDifficulty() {
+        // Aumentar velocidad de caída
+        this.fallSpeed += 10;
+
+        // Aumwenta el spawn
+        this.spawnRates.damage = Math.min(this.spawnRates.damage + 0.05, 0.5);
+        this.spawnRates.points = Math.max(this.spawnRates.points - 0.03, 0.4);
     }
 
     gameOver() {
+        // Por implementar bien
+        this.scene.start('GameOverScene', { score: this.score, hats: this.hats.length });
     }
 }
