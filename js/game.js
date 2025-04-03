@@ -25,5 +25,6 @@ export class Game extends Phaser.Game {
         this.scene.add('EndScene', EndScene);
 
         this.scene.start('MenuScene');
+
     }
 }

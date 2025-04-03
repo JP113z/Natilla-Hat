@@ -31,7 +31,8 @@ export class PlayScene extends Phaser.Scene {
         this.load.image('pointObj', 'assets/images/point.png');
         this.load.image('damageObj', 'assets/images/damage.png');
         this.load.image('healthObj', 'assets/images/health.png');
-
+        this.load.image('leftHalf', 'assets/images/leftHalfScreen.png');
+        this.load.image('rightHalf', 'assets/images/rightHalfScreen.png');
         // Sonidos
         this.load.audio('pointSound', './assets/sound/point.mp3');
         this.load.audio('damageSound', './assets/sound/damage.mp3');
@@ -46,29 +47,88 @@ export class PlayScene extends Phaser.Scene {
         // Fondo
         this.add.image(width / 2, height / 2, 'menuBg').setDisplaySize(width, height);
 
+        // Manejo de clicks
+        let leftPush = false;
+        let rightPush = false;
+        const leftZone = this.add.zone(200, 300, 400, 600);
+        leftZone.setInteractive();
+        const rightZone = this.add.zone(600, 300, 400, 600);
+        rightZone.setInteractive();
+
+        leftZone.on('pointerdown', (pointer) => {
+            leftPush = true;
+        });
+        rightZone.on('pointerdown', (pointer) => {
+            rightPush = true;
+        });
+
+        this.input.on('pointerup', (pointer) => {
+            leftPush = false;
+            rightPush = false;
+        });
+
         // Efectos de sonido
         this.pointSound = this.sound.add('pointSound');
         this.damageSound = this.sound.add('damageSound');
         this.healthSound = this.sound.add('healthSound');
 
         // Crear jugador
-        this.player = this.physics.add.sprite(width / 2, height - 100, 'cat');
+        this.player = this.physics.add.sprite(width / 2 + 50, height - 200, 'cat').setDepth(5);
+        this.player.setImmovable(false);
+        this.player.setGravityY(2000);
+        this.player.setFriction(0);
         this.player.setCollideWorldBounds(true);
+        this.player.body.setBounce(1);
+
 
         // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
         this.catWidth = this.player.width;
         this.catHeight = this.player.height;
 
         // Crear plataforma
-        this.platform = this.physics.add.sprite(width / 2, height - 50, 'platform');
+        this.platform = this.physics.add.image(400, 550, 'platform');  // Posición y textura de la plataforma
+        // Propiedades físicas de plataforma
+        this.platform.setImmovable(false);
+        this.platform.setCollideWorldBounds(true);
+        this.platform.setGravityY(0);
+        this.platform.setFriction(5);
+        this.platform.body.allowRotation = true; // Allow rotation
+        this.platform.body.setBounce(0); // Prevent bouncing
+        this.platform.body.setAngularDrag(100); // Dampen rotation over time
+        this.platform.body.setMass(10); // Make the platform heavier for stability
         this.platform.setImmovable(true);
 
-        // Crear HUD
+        // Interaccion fisicas plataforma - jugador
+        this.physics.add.collider(this.player, this.platform, () => {
+
+        });
+        // Cambia la posicion del gato relativo a la posicion de la plataforma
+        this.events.on('update', () => {
+            this.platform.body.updateFromGameObject(); // Sync collider with platform's rotation and position
+        });
+
+        // Mover plataforma
+        this.time.addEvent({
+            delay: 100,
+            loop: true,
+            callback: () => {
+                if (leftPush) {
+                    this.seesawRotation(this.platform, 80);
+                }
+                else if (rightPush) {
+                    this.seesawRotation(this.platform, -80);
+                }
+                else {
+                    this.seesawRotation(this.platform, 0);
+                }
+            }
+        });
+
         this.createHUD();
 
         // Configurar temporizador para spawn de objetos
         this.time.addEvent({
-            delay: 1000,
+            delay: 300,
             callback: this.spawnObject,
             callbackScope: this,
             loop: true
@@ -117,9 +177,8 @@ export class PlayScene extends Phaser.Scene {
 
     spawnObject() {
         const width = GameManager.instance.width;
-        const randomX = Phaser.Math.Between(50, width - 50);
+        const randomX = Phaser.Math.Between(100, width - 100);
         const randomType = this.getRandomObjectType();
-
         let object;
 
         switch (randomType) {
@@ -148,19 +207,16 @@ export class PlayScene extends Phaser.Scene {
 
         // Colisiones con el jugador
         this.physics.add.overlap(this.player, object, this.handleObjectCollision, null, this);
+
     }
 
     resizeObject(object) {
         object.setScale(this.objectScale);
-
-        /*
-        const targetWidth = this.catWidth * 0.6; // 60% del ancho del gato
-        const scaleX = targetWidth / object.width;
-        object.setScale(scaleX);
-        */
         object.body.setSize(object.width * object.scaleX, object.height * object.scaleY);
     }
-
+    bounce(player) {
+        player.y = player.y - 10;
+    }
     getRandomObjectType() {
         const rand = Math.random();
         if (rand < this.spawnRates.points) {
@@ -172,6 +228,9 @@ export class PlayScene extends Phaser.Scene {
         }
     }
 
+    seesawRotation(seesaw, velocity) {
+        seesaw.setAngularVelocity(velocity);
+    }
     handleObjectCollision(player, object) {
         switch (object.objectType) {
             case 'points':
