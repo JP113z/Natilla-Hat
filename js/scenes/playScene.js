@@ -46,6 +46,8 @@ export class PlayScene extends Phaser.Scene {
 
         // Fondo
         this.add.image(width / 2, height / 2, 'menuBg').setDisplaySize(width, height);
+        this.add.image(200, 300, 'leftHalf');
+        this.add.image(600, 300, 'rightHalf');
 
         // Manejo de clicks
         let leftPush = false;
