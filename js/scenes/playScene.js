@@ -31,6 +31,8 @@ export class PlayScene extends Phaser.Scene {
         this.load.image('pointObj', 'assets/images/point.png');
         this.load.image('damageObj', 'assets/images/damage.png');
         this.load.image('healthObj', 'assets/images/health.png');
+        this.load.image('leftBtn', 'assets/images/Left.png');
+        this.load.image('rightBtn', 'assets/images/Right.png');
 
         // Sonidos
         this.load.audio('pointSound', './assets/sound/point.mp3');
@@ -76,6 +78,30 @@ export class PlayScene extends Phaser.Scene {
 
         // Colisiones
         this.physics.add.collider(this.player, this.platform);
+
+        // Crear botones de control
+        const btnY = GameManager.instance.height - 50;
+        const btnMargin = 20;
+        const btnScale = 0.5;
+
+        // Botón izquierdo
+        this.leftBtn = this.add.image(btnMargin + 50, btnY, 'leftBtn')
+            .setInteractive()
+            .setScale(btnScale)
+            .on('pointerdown', () => this.movePlayer('left'))
+            .on('pointerup', () => this.stopPlayer());
+
+        // Botón derecho
+        this.rightBtn = this.add.image(GameManager.instance.width - btnMargin - 50, btnY, 'rightBtn')
+            .setInteractive()
+            .setScale(btnScale)
+            .on('pointerdown', () => this.movePlayer('right'))
+            .on('pointerup', () => this.stopPlayer());
+
+        // Velocidad de movimiento del jugador
+        this.playerSpeed = 200;
+        this.playerMoving = false;
+        this.playerDirection = null;
     }
 
     update() {
@@ -84,6 +110,31 @@ export class PlayScene extends Phaser.Scene {
 
         // Actualizar HUD
         this.updateHUD();
+
+        if (this.playerMoving) {
+            if (this.playerDirection === 'left') {
+                this.player.setVelocityX(-this.playerSpeed);
+            } else {
+                this.player.setVelocityX(this.playerSpeed);
+            }
+        }
+    }
+
+    movePlayer(direction) {
+        this.playerMoving = true;
+        this.playerDirection = direction;
+
+        if (direction === 'left') {
+            this.player.setVelocityX(-this.playerSpeed);
+        } else {
+            this.player.setVelocityX(this.playerSpeed);
+        }
+    }
+
+    stopPlayer() {
+        this.playerMoving = false;
+        this.playerDirection = null;
+        this.player.setVelocityX(0);
     }
 
     createHUD() {
