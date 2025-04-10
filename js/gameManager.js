@@ -12,7 +12,6 @@ export class GameManager {
 
         this.width = window.innerWidth;
         this.height = window.innerHeight;
-        this.hatsManager = new hatsManager();
         this.game = new Game(this.width, this.height);
         document.body.style.margin = '0';
         document.body.style.overflow = 'hidden';
