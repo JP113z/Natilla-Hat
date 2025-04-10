@@ -10,9 +10,8 @@ export class Game extends Phaser.Game {
             height: height,
             backgroundColor: '#E6E7E8',
             physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 0 },
+                default: 'matter',
+                matter: {
                     debug: false
                 }
             },

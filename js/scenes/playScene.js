@@ -31,8 +31,9 @@ export class PlayScene extends Phaser.Scene {
         this.load.image('pointObj', 'assets/images/point.png');
         this.load.image('damageObj', 'assets/images/damage.png');
         this.load.image('healthObj', 'assets/images/health.png');
-        this.load.image('leftHalf', 'assets/images/leftHalfScreen.png');
-        this.load.image('rightHalf', 'assets/images/rightHalfScreen.png');
+        this.load.image('leftBtn', 'assets/images/Left.png');
+        this.load.image('rightBtn', 'assets/images/Right.png');
+        this.load.image('platformCorrected', 'assets/images/platformCorrected.png');
         // Sonidos
         this.load.audio('pointSound', './assets/sound/point.mp3');
         this.load.audio('damageSound', './assets/sound/damage.mp3');
@@ -43,88 +44,75 @@ export class PlayScene extends Phaser.Scene {
         // Configuración inicial
         const width = GameManager.instance.width;
         const height = GameManager.instance.height;
-
+        this.clicked = false;
+        this.playerFlag = false;
         // Fondo
         this.add.image(width / 2, height / 2, 'menuBg').setDisplaySize(width, height);
-        this.add.image(200, 300, 'leftHalf');
-        this.add.image(600, 300, 'rightHalf');
 
-        // Manejo de clicks
-        let leftPush = false;
-        let rightPush = false;
+        // Limites en pantalla de físicas
+        this.matter.world.setBounds(0, 0, width, height, 20, true, true, true, true);
+
+        // Zona de clickeo
         const leftZone = this.add.zone(200, 300, 400, 600);
         leftZone.setInteractive();
         const rightZone = this.add.zone(600, 300, 400, 600);
         rightZone.setInteractive();
-
-        leftZone.on('pointerdown', (pointer) => {
-            leftPush = true;
-        });
-        rightZone.on('pointerdown', (pointer) => {
-            rightPush = true;
-        });
-
-        this.input.on('pointerup', (pointer) => {
-            leftPush = false;
-            rightPush = false;
-        });
 
         // Efectos de sonido
         this.pointSound = this.sound.add('pointSound');
         this.damageSound = this.sound.add('damageSound');
         this.healthSound = this.sound.add('healthSound');
 
-        // Crear jugador
-        this.player = this.physics.add.sprite(width / 2 + 50, height - 200, 'cat').setDepth(5);
-        this.player.setImmovable(false);
-        this.player.setGravityY(2000);
-        this.player.setFriction(0);
-        this.player.setCollideWorldBounds(true);
-        this.player.body.setBounce(1);
+        // Crear jugador (Las fisicas se declaran en el update llamando al metodo playermatter())
+        this.player = this.matter.add.image(width / 2, height - 300, 'cat').setDepth(5);
+        this.player.setIgnoreGravity(true);
 
-
+        // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
+        this.catWidth = this.player.width;
+        this.catHeight = this.player.height;
         // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
         this.catWidth = this.player.width;
         this.catHeight = this.player.height;
 
         // Crear plataforma
-        this.platform = this.physics.add.image(400, 550, 'platform');  // Posición y textura de la plataforma
-        // Propiedades físicas de plataforma
-        this.platform.setImmovable(false);
-        this.platform.setCollideWorldBounds(true);
-        this.platform.setGravityY(0);
-        this.platform.setFriction(5);
-        this.platform.body.allowRotation = true; // Allow rotation
-        this.platform.body.setBounce(0); // Prevent bouncing
-        this.platform.body.setAngularDrag(100); // Dampen rotation over time
-        this.platform.body.setMass(10); // Make the platform heavier for stability
-        this.platform.setImmovable(true);
-
-        // Interaccion fisicas plataforma - jugador
-        this.physics.add.collider(this.player, this.platform, () => {
-
+        this.platform = this.matter.add.sprite(400, 0, 'platformCorrected', null, {
+            isStatic: false,
+            density: 0.015,  // Efecto de peso
+            frictionAir: 0.02
         });
-        // Cambia la posicion del gato relativo a la posicion de la plataforma
-        this.events.on('update', () => {
-            this.platform.body.updateFromGameObject(); // Sync collider with platform's rotation and position
+        //  Centro de gravedad (Ancla el objeto a un punto del mundo)
+        this.matter.add.worldConstraint(this.platform, 0, 0.7, {
+            pointA: { x: 400, y: 500 }, // Punto de anclaje en el mundo
+            pointB: { x: 0, y: 0 }, // Posición del punto relativa a la posición de la plataforma
+            stiffness: 0.9 //Taylor swift
         });
 
         // Mover plataforma
-        this.time.addEvent({
-            delay: 100,
-            loop: true,
-            callback: () => {
-                if (leftPush) {
-                    this.seesawRotation(this.platform, 80);
-                }
-                else if (rightPush) {
-                    this.seesawRotation(this.platform, -80);
-                }
-                else {
-                    this.seesawRotation(this.platform, 0);
-                }
+        let isLeftPressed = false;
+        let isRightPressed = false;
+        leftZone.on('pointerdown', (pointer) => {
+            if (this.clicked == false) {
+                this.clicked = true;
+                this.playerFlag = true;
+                console.log("si");
+            }
+            if (!isLeftPressed) {
+
+                this.platform.setAngularVelocity(-0.05); // Rotacion negativa
+                isLeftPressed = true;
             }
         });
+        rightZone.on('pointerdown', (pointer) => {
+            if (!isRightPressed) {
+                this.platform.setAngularVelocity(0.05); // Rotacion positiva
+                isRightPressed = true;
+            }
+        });
+        this.input.on('pointerup', (pointer) => {
+            isLeftPressed = false;
+            isRightPressed = false;
+        });
+
 
         this.createHUD();
 
@@ -137,7 +125,11 @@ export class PlayScene extends Phaser.Scene {
         });
 
         // Colisiones
-        this.physics.add.collider(this.player, this.platform);
+
+        // Crear botones de control
+        const btnY = GameManager.instance.height - 50;
+        const btnMargin = 20;
+        const btnScale = 0.5;
     }
 
     update() {
@@ -146,6 +138,29 @@ export class PlayScene extends Phaser.Scene {
 
         // Actualizar HUD
         this.updateHUD();
+
+        // Relantizar plataforma despues de un movimiento
+        this.platform.setAngularVelocity(this.platform.body.angularVelocity * 0.95);
+        this.matter.world.on('beforeupdate', () => {
+            this.matter.body.setAngularVelocity(this.player.body, 0);
+            this.matter.body.setAngle(this.player.body, 0);
+        });
+
+        //Activar fisicas de jugador
+        if (this.playerFlag) {
+            this.playermatter();
+        };
+
+    }
+    playermatter() {
+        this.playerFlag = false;
+        this.player.setIgnoreGravity(false);
+        this.player.setCircle(); // Collider figura
+        this.player.setDensity(0.2); // Efecto de peso
+        this.player.setBounce(0.2);
+        this.player.setFriction(0, 0);
+        this.player.setVelocity(5, 5);
+        this.player.setCollisionCategory(1); // Capa de colisión
     }
 
     createHUD() {
@@ -185,36 +200,34 @@ export class PlayScene extends Phaser.Scene {
 
         switch (randomType) {
             case 'points':
-                object = this.physics.add.sprite(randomX, 0, 'pointObj');
+                object = this.matter.add.sprite(randomX, 0, 'pointObj');
+                object.setDisplaySize(20, 20);
+                object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'points';
                 this.objects.points.push(object);
                 break;
             case 'damage':
-                object = this.physics.add.sprite(randomX, 0, 'damageObj');
+                object = this.matter.add.sprite(randomX, 0, 'damageObj');
+                object.setDisplaySize(20, 20);
+                object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'damage';
                 this.objects.damage.push(object);
                 break;
             case 'health':
-                object = this.physics.add.sprite(randomX, 0, 'healthObj');
+                object = this.matter.add.sprite(randomX, 0, 'healthObj');
+                object.setDisplaySize(20, 20);
+                object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'health';
                 this.objects.health.push(object);
                 break;
         }
 
-        // Ajustar el tamaño del objeto para que sea proporcional al gato
-        this.resizeObject(object);
-
         // Configurar física del objeto
         object.body.velocity.y = this.fallSpeed;
 
         // Colisiones con el jugador
-        this.physics.add.overlap(this.player, object, this.handleObjectCollision, null, this);
+        //this.matter.add.overlap(this.player, object, this.handleObjectCollision, null, this);
 
-    }
-
-    resizeObject(object) {
-        object.setScale(this.objectScale);
-        object.body.setSize(object.width * object.scaleX, object.height * object.scaleY);
     }
     bounce(player) {
         player.y = player.y - 10;
@@ -230,9 +243,6 @@ export class PlayScene extends Phaser.Scene {
         }
     }
 
-    seesawRotation(seesaw, velocity) {
-        seesaw.setAngularVelocity(velocity);
-    }
     handleObjectCollision(player, object) {
         switch (object.objectType) {
             case 'points':
