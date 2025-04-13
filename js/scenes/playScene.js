@@ -41,16 +41,26 @@ export class PlayScene extends Phaser.Scene {
     }
 
     create() {
+        // Categorias de colision (Define un ID en hexa para cada objeto)
+        this.playerCategory = 0x0001;
+        this.platformCategory = 0x0002;
+        this.pointCategory = 0x0003;
+        this.boundsCategory = 0x0004;
         // Configuración inicial
         const width = GameManager.instance.width;
         const height = GameManager.instance.height;
         this.clicked = false;
-        this.playerFlag = false;
+        this.playerFlag = false; // Bandera para activar las físicas del jugador
+        this.platformFlag = false; // Bandera para detener rotación de la plataforma
         // Fondo
         this.add.image(width / 2, height / 2, 'menuBg').setDisplaySize(width, height);
 
         // Limites en pantalla de físicas
-        this.matter.world.setBounds(0, 0, width, height, 20, true, true, true, true);
+        this.matter.world.setBounds(0, 0, width, height, 20, true, true, true, true, {
+            collisionFilter: {
+                category: this.boundsCategory
+            }
+        });
 
         // Zona de clickeo
         const leftZone = this.add.zone(200, 300, 400, 600);
@@ -66,26 +76,35 @@ export class PlayScene extends Phaser.Scene {
         // Crear jugador (Las fisicas se declaran en el update llamando al metodo playermatter())
         this.player = this.matter.add.image(width / 2, height - 300, 'cat').setDepth(5);
         this.player.setIgnoreGravity(true);
+        this.player.setCollisionCategory(this.playerCategory);
+        this.player.setCollidesWith(this.platformCategory || this.pointCategory); // Define con qué categorías puede colisionar
 
         // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
         this.catWidth = this.player.width;
         this.catHeight = this.player.height;
-        // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
-        this.catWidth = this.player.width;
-        this.catHeight = this.player.height;
 
-        // Crear plataforma
+        // Crear plataforma y configurar colisiones
         this.platform = this.matter.add.sprite(400, 0, 'platformCorrected', null, {
             isStatic: false,
             density: 0.015,  // Efecto de peso
             frictionAir: 0.02
         });
-        //  Centro de gravedad (Ancla el objeto a un punto del mundo)
+        this.platform.setCollisionCategory(this.platformCategory);
+        this.player.setCollidesWith(this.playerCategory);
+
+        // Ensure the player and platform have proper collision settings
+        /*this.player.setCollidesWith([this.platform.body.collisionFilter.category]);
+        this.platform.setCollidesWith([this.player.body.collisionFilter.category]);*/
+
+        // Centro de gravedad (Ancla el objeto a un punto del mundo)
         this.matter.add.worldConstraint(this.platform, 0, 0.7, {
             pointA: { x: 400, y: 500 }, // Punto de anclaje en el mundo
             pointB: { x: 0, y: 0 }, // Posición del punto relativa a la posición de la plataforma
-            stiffness: 0.9 //Taylor swift
+            stiffness: 0.9, //Taylor swift
         });
+
+        // Remove player's collision category so it gets affected by everything
+        this.player.setCollisionCategory(null);
 
         // Mover plataforma
         let isLeftPressed = false;
@@ -94,17 +113,22 @@ export class PlayScene extends Phaser.Scene {
             if (this.clicked == false) {
                 this.clicked = true;
                 this.playerFlag = true;
-                console.log("si");
             }
-            if (!isLeftPressed) {
+            if (!isLeftPressed && this.platformFlag == false && (this.platform.angle < 20 || this.platform.angle > -20)) {
 
                 this.platform.setAngularVelocity(-0.05); // Rotacion negativa
+                console.log(this.platform.angle);
                 isLeftPressed = true;
             }
         });
         rightZone.on('pointerdown', (pointer) => {
-            if (!isRightPressed) {
+            if (this.clicked == false) {
+                this.clicked = true;
+                this.playerFlag = true;
+            }
+            if (!isLeftPressed && this.platformFlag == false && (this.platform.angle < 20 || this.platform.angle > -20)) {
                 this.platform.setAngularVelocity(0.05); // Rotacion positiva
+                console.log(this.platform.angle);
                 isRightPressed = true;
             }
         });
@@ -130,9 +154,11 @@ export class PlayScene extends Phaser.Scene {
         const btnY = GameManager.instance.height - 50;
         const btnMargin = 20;
         const btnScale = 0.5;
+
     }
 
     update() {
+
         // Limpiar objetos que están fuera de la pantalla
         this.cleanupObjects();
 
@@ -145,6 +171,20 @@ export class PlayScene extends Phaser.Scene {
             this.matter.body.setAngularVelocity(this.player.body, 0);
             this.matter.body.setAngle(this.player.body, 0);
         });
+        // Evitar rotaciones erraticas  de la plataforma
+        if (this.platform.angle > 10.36) {
+            this.platformFlag = true;
+            this.platform.angle = 10.36;
+            this.platform.angularVelocity = 0;
+        }
+        if (this.platform.angle < -10.36) {
+            this.platformFlag = true;
+            this.platform.angle = -10.36;
+            this.platform.angularVelocity = 0;
+        }
+        if (this.platform.angle < 10.36 && this.platform.angle > -10.36) { this.platformFlag = false; }
+
+        console.log(this.platform.angle);
 
         //Activar fisicas de jugador
         if (this.playerFlag) {
@@ -197,7 +237,6 @@ export class PlayScene extends Phaser.Scene {
         const randomX = Phaser.Math.Between(100, width - 100);
         const randomType = this.getRandomObjectType();
         let object;
-
         switch (randomType) {
             case 'points':
                 object = this.matter.add.sprite(randomX, 0, 'pointObj');
@@ -205,6 +244,8 @@ export class PlayScene extends Phaser.Scene {
                 object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'points';
                 this.objects.points.push(object);
+                object.setCollisionCategory(this.pointCategory);
+                object.setCollidesWith([this.playerCategory]);
                 break;
             case 'damage':
                 object = this.matter.add.sprite(randomX, 0, 'damageObj');
@@ -212,6 +253,8 @@ export class PlayScene extends Phaser.Scene {
                 object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'damage';
                 this.objects.damage.push(object);
+                object.setCollisionCategory(this.pointCategory);
+                object.setCollidesWith([this.playerCategory]);
                 break;
             case 'health':
                 object = this.matter.add.sprite(randomX, 0, 'healthObj');
@@ -219,15 +262,13 @@ export class PlayScene extends Phaser.Scene {
                 object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'health';
                 this.objects.health.push(object);
+                object.setCollisionCategory(this.pointCategory);
+                object.setCollidesWith([this.playerCategory]);
                 break;
         }
 
         // Configurar física del objeto
         object.body.velocity.y = this.fallSpeed;
-
-        // Colisiones con el jugador
-        //this.matter.add.overlap(this.player, object, this.handleObjectCollision, null, this);
-
     }
     bounce(player) {
         player.y = player.y - 10;
