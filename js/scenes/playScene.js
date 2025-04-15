@@ -34,6 +34,7 @@ export class PlayScene extends Phaser.Scene {
         this.load.image('leftBtn', 'assets/images/Left.png');
         this.load.image('rightBtn', 'assets/images/Right.png');
         this.load.image('platformCorrected', 'assets/images/platformCorrected.png');
+        this.load.image('bottomLimit', 'assets/images/bottomLimit.png')
         // Sonidos
         this.load.audio('pointSound', './assets/sound/point.mp3');
         this.load.audio('damageSound', './assets/sound/damage.mp3');
@@ -61,6 +62,7 @@ export class PlayScene extends Phaser.Scene {
                 category: this.boundsCategory
             }
         });
+        this.worldBoundsVariable = this.matter.world.bounds;
 
         // Zona de clickeo
         const leftZone = this.add.zone(200, 300, 400, 600);
@@ -79,6 +81,10 @@ export class PlayScene extends Phaser.Scene {
         this.player.setCollisionCategory(this.playerCategory);
         this.player.setCollidesWith(this.platformCategory || this.pointCategory); // Define con qué categorías puede colisionar
 
+        // Límite inferior del mundo
+        this.bottomLimit = this.matter.add.image(width / 2, height, 'bottomLimit').setDepth(5);
+        this.bottomLimit.setStatic(true);
+
         // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
         this.catWidth = this.player.width;
         this.catHeight = this.player.height;
@@ -92,10 +98,6 @@ export class PlayScene extends Phaser.Scene {
         this.platform.setCollisionCategory(this.platformCategory);
         this.player.setCollidesWith(this.playerCategory);
 
-        // Ensure the player and platform have proper collision settings
-        /*this.player.setCollidesWith([this.platform.body.collisionFilter.category]);
-        this.platform.setCollidesWith([this.player.body.collisionFilter.category]);*/
-
         // Centro de gravedad (Ancla el objeto a un punto del mundo)
         this.matter.add.worldConstraint(this.platform, 0, 0.7, {
             pointA: { x: 400, y: 500 }, // Punto de anclaje en el mundo
@@ -103,7 +105,6 @@ export class PlayScene extends Phaser.Scene {
             stiffness: 0.9, //Taylor swift
         });
 
-        // Remove player's collision category so it gets affected by everything
         this.player.setCollisionCategory(null);
 
         // Mover plataforma
@@ -137,18 +138,8 @@ export class PlayScene extends Phaser.Scene {
             isRightPressed = false;
         });
 
-
+        // Llama metodo para crear HUD
         this.createHUD();
-
-        // Configurar temporizador para spawn de objetos
-        this.time.addEvent({
-            delay: 300,
-            callback: this.spawnObject,
-            callbackScope: this,
-            loop: true
-        });
-
-        // Colisiones
 
         // Crear botones de control
         const btnY = GameManager.instance.height - 50;
@@ -161,6 +152,7 @@ export class PlayScene extends Phaser.Scene {
 
         // Limpiar objetos que están fuera de la pantalla
         this.cleanupObjects();
+        // Destruir objeto si sale de pantalla
 
         // Actualizar HUD
         this.updateHUD();
@@ -184,12 +176,49 @@ export class PlayScene extends Phaser.Scene {
         }
         if (this.platform.angle < 10.36 && this.platform.angle > -10.36) { this.platformFlag = false; }
 
-        console.log(this.platform.angle);
-
-        //Activar fisicas de jugador
+        //Activar fisicas de jugador y contador objetos
         if (this.playerFlag) {
             this.playermatter();
+            this.time.addEvent({
+                delay: 300,
+                callback: this.spawnObject,
+                callbackScope: this,
+                loop: true
+            });
         };
+
+        // Colisiones entre objetos y jugador
+
+        this.matter.world.on('collisionstart', (event) => {
+            const pairs = event.pairs;
+            for (let i = 0; i < pairs.length; i++) {
+                const bodyA = pairs[i].bodyA.gameObject;
+                const bodyB = pairs[i].bodyB.gameObject;
+                // Revisa si el objeto choca con limite inferior y lo agrega a la cola de objetos a eliminar
+                if (bodyA === this.bottomLimit && (this.objects.points.includes(bodyB) || this.objects.damage.includes(bodyB) || this.objects.health.includes(bodyB))) {
+                    this.objectsToRemove.push(bodyB);
+                }
+                // Revisa si el jugador choca con los objetos (Se necesita ajustar dado a que el evento es triggereado miles de veces por frame que se detecte el impacto)
+
+                if (bodyA === this.player && this.objects.points.includes(bodyB)) {
+                    this.matter.world.remove(bodyB);
+                    this.collectPoints(bodyB);
+                    console.log(bodyB);
+                }
+                else if (bodyA === this.player && this.objects.damage.includes(bodyB)) {
+                    this.matter.world.remove(bodyB);
+                    this.destroy(bodyB);
+                    this.objectsToRemove.push(bodyB);
+                    this.takeDamage(bodyB);
+                }
+                else if (bodyA === this.player && this.objects.health.includes(bodyB)) {
+                    this.matter.world.remove(bodyB);
+                    this.destroy(bodyB);
+                    this.objectsToRemove.push(bodyB);
+                    this.gainHealth(bodyB);
+                }
+            }
+        });
 
     }
     playermatter() {
@@ -236,42 +265,38 @@ export class PlayScene extends Phaser.Scene {
         const width = GameManager.instance.width;
         const randomX = Phaser.Math.Between(100, width - 100);
         const randomType = this.getRandomObjectType();
-        let object;
+        this.object;
         switch (randomType) {
             case 'points':
-                object = this.matter.add.sprite(randomX, 0, 'pointObj');
-                object.setDisplaySize(20, 20);
-                object.setBody({ type: 'circle', radius: 8 });
-                object.objectType = 'points';
-                this.objects.points.push(object);
-                object.setCollisionCategory(this.pointCategory);
-                object.setCollidesWith([this.playerCategory]);
+                this.object = this.matter.add.sprite(randomX, 0, 'pointObj');
+                this.object.setDisplaySize(20, 20);
+                this.object.setBody({ type: 'circle', radius: 8 });
+                this.object.objectType = 'points';
+                this.objects.points.push(this.object);
+                this.object.setCollisionCategory(this.pointCategory);
+                this.object.setCollidesWith([this.playerCategory]);
                 break;
             case 'damage':
-                object = this.matter.add.sprite(randomX, 0, 'damageObj');
-                object.setDisplaySize(20, 20);
-                object.setBody({ type: 'circle', radius: 8 });
-                object.objectType = 'damage';
-                this.objects.damage.push(object);
-                object.setCollisionCategory(this.pointCategory);
-                object.setCollidesWith([this.playerCategory]);
+                this.object = this.matter.add.sprite(randomX, 0, 'damageObj');
+                this.object.setDisplaySize(20, 20);
+                this.object.setBody({ type: 'circle', radius: 8 });
+                this.object.objectType = 'damage';
+                this.objects.damage.push(this.object);
+                this.object.setCollisionCategory(this.pointCategory);
+                this.object.setCollidesWith([this.playerCategory]);
                 break;
             case 'health':
-                object = this.matter.add.sprite(randomX, 0, 'healthObj');
-                object.setDisplaySize(20, 20);
-                object.setBody({ type: 'circle', radius: 8 });
-                object.objectType = 'health';
-                this.objects.health.push(object);
-                object.setCollisionCategory(this.pointCategory);
-                object.setCollidesWith([this.playerCategory]);
+                this.object = this.matter.add.sprite(randomX, 0, 'healthObj');
+                this.object.setDisplaySize(20, 20);
+                this.object.setBody({ type: 'circle', radius: 8 });
+                this.object.objectType = 'health';
+                this.objects.health.push(this.object);
+                this.object.setCollisionCategory(this.pointCategory);
+                this.object.setCollidesWith([this.playerCategory]);
                 break;
         }
-
         // Configurar física del objeto
-        object.body.velocity.y = this.fallSpeed;
-    }
-    bounce(player) {
-        player.y = player.y - 10;
+        this.object.body.velocity.y = this.fallSpeed;
     }
     getRandomObjectType() {
         const rand = Math.random();
@@ -281,20 +306,6 @@ export class PlayScene extends Phaser.Scene {
             return 'damage';
         } else {
             return 'health';
-        }
-    }
-
-    handleObjectCollision(player, object) {
-        switch (object.objectType) {
-            case 'points':
-                this.collectPoints(object);
-                break;
-            case 'damage':
-                this.takeDamage(object);
-                break;
-            case 'health':
-                this.gainHealth(object);
-                break;
         }
     }
 
@@ -351,6 +362,7 @@ export class PlayScene extends Phaser.Scene {
 
             // Destruir el objeto
             obj.destroy();
+            this.matter.world.remove(obj);
         }
         this.objectsToRemove = [];
 
