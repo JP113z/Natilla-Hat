@@ -53,6 +53,7 @@ export class PlayScene extends Phaser.Scene {
         this.clicked = false;
         this.playerFlag = false; // Bandera para activar las físicas del jugador
         this.platformFlag = false; // Bandera para detener rotación de la plataforma
+        this.deletedIDFlag; // Bandera para evitar que update elimine miles de veces el mismo objeto
         // Fondo
         this.add.image(width / 2, height / 2, 'menuBg').setDisplaySize(width, height);
 
@@ -198,22 +199,22 @@ export class PlayScene extends Phaser.Scene {
                 if (bodyA === this.bottomLimit && (this.objects.points.includes(bodyB) || this.objects.damage.includes(bodyB) || this.objects.health.includes(bodyB))) {
                     this.objectsToRemove.push(bodyB);
                 }
-                // Revisa si el jugador choca con los objetos (Se necesita ajustar dado a que el evento es triggereado miles de veces por frame que se detecte el impacto)
-
-                if (bodyA === this.player && this.objects.points.includes(bodyB)) {
+                // Revisa si el jugador choca con los objetos
+                if (bodyA === this.player && this.objects.points.includes(bodyB) && this.deletedIDFlag !== bodyB) {
+                    this.deletedIDFlag = bodyB;
                     this.matter.world.remove(bodyB);
                     this.collectPoints(bodyB);
                     console.log(bodyB);
                 }
-                else if (bodyA === this.player && this.objects.damage.includes(bodyB)) {
+                else if (bodyA === this.player && this.objects.damage.includes(bodyB) && this.deletedIDFlag !== bodyB) {
+                    this.deletedIDFlag = bodyB;
                     this.matter.world.remove(bodyB);
-                    this.destroy(bodyB);
                     this.objectsToRemove.push(bodyB);
                     this.takeDamage(bodyB);
                 }
-                else if (bodyA === this.player && this.objects.health.includes(bodyB)) {
+                else if (bodyA === this.player && this.objects.health.includes(bodyB) && this.deletedIDFlag !== bodyB) {
+                    this.deletedIDFlag = bodyB;
                     this.matter.world.remove(bodyB);
-                    this.destroy(bodyB);
                     this.objectsToRemove.push(bodyB);
                     this.gainHealth(bodyB);
                 }
