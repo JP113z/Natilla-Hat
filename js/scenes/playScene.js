@@ -395,35 +395,35 @@ export class PlayScene extends Phaser.Scene {
     createHUD() {
         // Texto de puntuación
         this.scoreText = this.add.text(
-            25, 30,
+            30, 40,
             `Puntos: ${this.score}`,
             { fontSize: '15px', fill: '#000' }
         );
 
-        // Texto de puntos sin usar
+        /* Texto de puntos sin usar
         this.unusedPointsText = this.add.text(
             20, 50,
-            `Puntos sin usar: ${this.unusedPoints}`,
+            `: ${this.unusedPoints}`,
             { fontSize: '15px', fill: '#000' }
-        );
+        ); */
 
         // Texto de salud
         this.healthText = this.add.text(
-            20, 80,
+            30, 90,
             `Salud: ${this.health}/${this.maxHealth}`,
             { fontSize: '15px', fill: '#000' }
         );
 
         // Texto de sombreros
         this.hatsText = this.add.text(
-            20, 110,
+            30, 125,
             `Sombreros: ${GameManager.instance.hatsManager.totalHats}`,
             { fontSize: '15px', fill: '#000' }
         );
 
         // Texto de protección
         this.protectionText = this.add.text(
-            20, 140,
+            30, 145,
             `Protección: ${GameManager.instance.hatsManager.protectionRemaining}`,
             { fontSize: '15px', fill: '#000' }
         );
@@ -431,7 +431,7 @@ export class PlayScene extends Phaser.Scene {
 
     updateHUD() {
         this.scoreText.setText(`Puntos: ${this.score}`);
-        this.unusedPointsText.setText(`Puntos sin usar: ${this.unusedPoints}`);
+        //  this.unusedPointsText.setText(`Puntos sin usar: ${this.unusedPoints}`);
         this.healthText.setText(`Salud: ${this.health}/${this.maxHealth}`);
         this.hatsText.setText(`Sombreros: ${GameManager.instance.hatsManager.totalHats}`);
         this.protectionText.setText(`Protección: ${GameManager.instance.hatsManager.protectionRemaining}`);
