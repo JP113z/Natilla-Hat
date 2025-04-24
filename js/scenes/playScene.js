@@ -225,55 +225,57 @@ export class PlayScene extends Phaser.Scene {
     updateHatIcons() {
         const hatsManager = GameManager.instance.hatsManager;
 
-        // Ordenar la visualización por tipo de sombrero
-        let slotIndex = 0;
-
-        // Mostrar sombreros normales (tipos 1-4)
-        for (let type = 1; type <= 4; type++) {
-            const count = hatsManager.countHatsOfType(type);
-            for (let i = 0; i < count; i++) {
-                // Si ya existe un icono en esta posición, no hacer nada
-                if (!this.hatIcons[slotIndex]) {
-                    const slot = this.hatSlots[slotIndex];
-                    // Crear el icono del sombrero
-                    const hatIcon = this.add.image(slot.x, slot.y, `hat${type}`)
-                        .setScale(0.4) // Ajustar escala según sea necesario
-                        .setDepth(91);
-
-                    // Añadir una animación de aparición
-                    this.tweens.add({
-                        targets: hatIcon,
-                        scale: { from: 0.2, to: 0.4 },
-                        duration: 300,
-                        ease: 'Back.easeOut'
-                    });
-
-                    this.hatIcons[slotIndex] = hatIcon;
-                }
-                slotIndex++;
+        // Limpiar iconos existentes
+        for (let i = 0; i < this.hatIcons.length; i++) {
+            if (this.hatIcons[i]) {
+                this.hatIcons[i].destroy();
+                this.hatIcons[i] = null;
             }
         }
 
-        // Mostrar sombrero ultrararo (tipo 5) si existe
+        // Primero manejamos el sombrero ultra raro (tipo 5) - siempre va en el slot 16
         if (hatsManager.countHatsOfType(5) > 0) {
-            // Usar el último slot para el ultrararo
             const ultraRareSlot = this.hatSlots[16];
-            if (!this.hatIcons[16]) {
-                const hatIcon = this.add.image(ultraRareSlot.x, ultraRareSlot.y, 'hat5')
-                    .setScale(0.5) // Un poco más grande por ser especial
-                    .setDepth(92);
+            const hatIcon = this.add.image(ultraRareSlot.x, ultraRareSlot.y, 'hat5')
+                .setScale(0.5)
+                .setDepth(92);
 
-                // Añadir un efecto brillante
+            // Añadir un efecto brillante
+            this.tweens.add({
+                targets: hatIcon,
+                alpha: { from: 0.7, to: 1 },
+                scale: { from: 0.4, to: 0.5 },
+                duration: 500,
+                yoyo: true,
+                repeat: -1
+            });
+
+            this.hatIcons[16] = hatIcon;
+        }
+
+        for (let tipo = 1; tipo <= 4; tipo++) {
+            const count = hatsManager.countHatsOfType(tipo);
+            const filaInicio = (tipo - 1) * 4; // Índice de inicio para este tipo
+
+            // Para cada sombrero de este tipo, crear un icono en su slot correspondiente
+            for (let i = 0; i < count && i < 4; i++) {
+                const slotIndex = filaInicio + i;
+                const slot = this.hatSlots[slotIndex];
+
+                // Crear el icono del sombrero
+                const hatIcon = this.add.image(slot.x, slot.y, `hat${tipo}`)
+                    .setScale(0.4)
+                    .setDepth(91);
+
+                // Añadir una animación de aparición
                 this.tweens.add({
                     targets: hatIcon,
-                    alpha: { from: 0.7, to: 1 },
-                    scale: { from: 0.4, to: 0.5 },
-                    duration: 500,
-                    yoyo: true,
-                    repeat: -1
+                    scale: { from: 0.2, to: 0.4 },
+                    duration: 300,
+                    ease: 'Back.easeOut'
                 });
 
-                this.hatIcons[16] = hatIcon;
+                this.hatIcons[slotIndex] = hatIcon;
             }
         }
     }
