@@ -68,7 +68,7 @@ export class hatsManager {
             if (hat.id === 5) {
                 return this.countHatsOfType(5) === 0; // El ultrararo solo puede salir una vez
             } else {
-                return this.countHatsOfType(hat.id) < 5; // Los demás hasta 5 veces
+                return this.countHatsOfType(hat.id) < 4; // Los demás hasta 4 veces
             }
         });
 
@@ -94,10 +94,10 @@ export class hatsManager {
     }
 
     areAllHatsMaxed() {
-        // Verificar si todos los sombreros normales tienen 5 copias y el ultrararo 1
+        // Verificar si todos los sombreros normales tienen 4 copias y el ultrararo 1
         const normalHatsMaxed = this.hatTypes
             .filter(hat => hat.id !== 5)
-            .every(hat => this.countHatsOfType(hat.id) >= 5);
+            .every(hat => this.countHatsOfType(hat.id) >= 4);
 
         const ultraRareObtained = this.countHatsOfType(5) === 1;
 
@@ -108,7 +108,7 @@ export class hatsManager {
         // Verificar si solo falta el ultrararo
         const normalHatsMaxed = this.hatTypes
             .filter(hat => hat.id !== 5)
-            .every(hat => this.countHatsOfType(hat.id) >= 5);
+            .every(hat => this.countHatsOfType(hat.id) >= 4);
 
         const ultraRareNotObtained = this.countHatsOfType(5) === 0;
 
@@ -231,5 +231,13 @@ export class hatsManager {
         this.pointMultiplier = 1;
         this.protectionRemaining = 0;
         this.explosionCounter = 0;
+
+        // Si hay iconos de sombreros, destruirlos
+        if (this.hatIcons) {
+            this.hatIcons.forEach(icon => {
+                if (icon) icon.destroy();
+            });
+            this.hatIcons = new Array(17).fill(null);
+        }
     }
 }

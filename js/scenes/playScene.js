@@ -27,6 +27,8 @@ export class PlayScene extends Phaser.Scene {
         this.fallSpeed = 100;
         this.objectsToRemove = [];
         this.objectScale = 0.1; // Tamaño de los objetos que caen
+        this.hatSlots = []; // Array para guardar los slots de sombreros
+        this.hatIcons = []; // Array para guardar los iconos de sombreros mostrados
     }
 
     preload() {
@@ -185,9 +187,95 @@ export class PlayScene extends Phaser.Scene {
         // Llama metodo para crear HUD
         this.createHUD();
 
+        this.createHatSlots();
+
         // Crear botón de sombreros (inicialmente invisible)
         this.createHatButton();
         this.updateHatButton();
+    }
+
+    createHatSlots() {
+        // Posición inicial para los slots 
+        const startX = 1320;
+        const startY = 960;
+        const slotSize = 50; // Tamaño de cada slot
+        const horizontalPadding = 2.5;
+        const verticalPadding = 13;
+
+        // Crear 17 slots (4 de cada tipo normal + 1 ultrararo)
+        for (let i = 0; i < 17; i++) {
+            // Calcular la posición en una cuadrícula de 5x4
+            const row = Math.floor(i / 4);
+            const col = i % 4;
+
+            const x = startX - col * (slotSize + horizontalPadding);
+            const y = startY - row * (slotSize + verticalPadding);
+
+            // Crear un rectángulo 
+            const slot = this.add.rectangle(x, y, slotSize, slotSize, 0x000000, 0)
+                .setDepth(90);
+
+            this.hatSlots.push(slot);
+        }
+
+        // Inicializar el array de iconos con nulls
+        this.hatIcons = new Array(17).fill(null);
+    }
+
+    updateHatIcons() {
+        const hatsManager = GameManager.instance.hatsManager;
+
+        // Ordenar la visualización por tipo de sombrero
+        let slotIndex = 0;
+
+        // Mostrar sombreros normales (tipos 1-4)
+        for (let type = 1; type <= 4; type++) {
+            const count = hatsManager.countHatsOfType(type);
+            for (let i = 0; i < count; i++) {
+                // Si ya existe un icono en esta posición, no hacer nada
+                if (!this.hatIcons[slotIndex]) {
+                    const slot = this.hatSlots[slotIndex];
+                    // Crear el icono del sombrero
+                    const hatIcon = this.add.image(slot.x, slot.y, `hat${type}`)
+                        .setScale(0.4) // Ajustar escala según sea necesario
+                        .setDepth(91);
+
+                    // Añadir una animación de aparición
+                    this.tweens.add({
+                        targets: hatIcon,
+                        scale: { from: 0.2, to: 0.4 },
+                        duration: 300,
+                        ease: 'Back.easeOut'
+                    });
+
+                    this.hatIcons[slotIndex] = hatIcon;
+                }
+                slotIndex++;
+            }
+        }
+
+        // Mostrar sombrero ultrararo (tipo 5) si existe
+        if (hatsManager.countHatsOfType(5) > 0) {
+            // Usar el último slot para el ultrararo
+            const ultraRareSlot = this.hatSlots[16];
+            if (!this.hatIcons[16]) {
+                const hatIcon = this.add.image(ultraRareSlot.x, ultraRareSlot.y, 'hat5')
+                    .setScale(0.5) // Un poco más grande por ser especial
+                    .setDepth(92);
+
+                // Añadir un efecto brillante
+                this.tweens.add({
+                    targets: hatIcon,
+                    alpha: { from: 0.7, to: 1 },
+                    scale: { from: 0.4, to: 0.5 },
+                    duration: 500,
+                    yoyo: true,
+                    repeat: -1
+                });
+
+                this.hatIcons[16] = hatIcon;
+            }
+        }
     }
 
     update() {
@@ -328,6 +416,9 @@ export class PlayScene extends Phaser.Scene {
         this.healthText.setText(`Salud: ${this.health}/${this.maxHealth}`);
         this.hatsText.setText(`Sombreros: ${GameManager.instance.hatsManager.totalHats}`);
         this.protectionText.setText(`Protección: ${GameManager.instance.hatsManager.protectionRemaining}`);
+
+        // Actualizar los iconos de sombreros
+        this.updateHatIcons();
     }
 
     createHatButton() {
@@ -431,6 +522,8 @@ export class PlayScene extends Phaser.Scene {
 
             // Actualizar HUD y efectos
             this.updatePlayerStats();
+
+            this.updateHatIcons();
         }
     }
 
