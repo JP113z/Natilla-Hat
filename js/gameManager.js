@@ -10,8 +10,8 @@ export class GameManager {
             GameManager.instance = this;
         }
 
-        this.width = 800;
-        this.height = 600;
+        this.width = 1366;
+        this.height = 1024;
         this.hatsManager = new hatsManager();
         this.game = new Game(this.width, this.height);
         document.body.style.margin = '0';

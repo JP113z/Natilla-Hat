@@ -30,23 +30,27 @@ export class PlayScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('cat', 'assets/images/cat.png');
-        this.load.image('platform', 'assets/images/platform.png');
+        // Srpites
+        this.load.image('cat', 'assets/newAssets/player.png');
         this.load.image('pointObj', 'assets/images/point.png');
         this.load.image('damageObj', 'assets/images/damage.png');
-        this.load.image('background', './assets/images/background.png');
         this.load.image('healthObj', 'assets/images/health.png');
         this.load.image('leftBtn', 'assets/images/Left.png');
         this.load.image('rightBtn', 'assets/images/Right.png');
-        this.load.image('platformCorrected', 'assets/images/platformCorrected.png');
-        this.load.image('bottomLimit', 'assets/images/bottomLimit.png');
+        this.load.image('platformCorrected', 'assets/newAssets/platform.png');
+        this.load.image('bottomLimit', 'assets/newAssets/bottomLimit.png');
+
+        // Anim
+        this.load.spritesheet('background', 'assets/newAssets/peceraBGanims.png', { frameWidth: 1366, frameHeight: 1024 });
+        this.load.spritesheet('gacha', 'assets/newAssets/gachaAnim.png', { frameWidth: 235, frameHeight: 267 });
 
         // Cargar imágenes de sombreros
-        this.load.image('hat1', 'assets/images/hat1.png');
-        this.load.image('hat2', 'assets/images/hat2.png');
-        this.load.image('hat3', 'assets/images/hat3.png');
-        this.load.image('hat4', 'assets/images/hat4.png');
-        this.load.image('hat5', 'assets/images/hat5.png');
+        this.load.image('hat1', 'assets/newAssets/protectiveHat.png');
+        this.load.image('hat2', 'assets/newAssets/explosiveHat.png');
+        this.load.image('hat3', 'assets/newAssets/healHat.png');
+        this.load.image('hat4', 'assets/newAssets/luffyHat.png');
+        this.load.image('hat5', 'assets/newAssets/ultraRareHat.png');
+
         this.load.image('hatButton', 'assets/images/hatButton.png');
         this.load.image('explosion', 'assets/images/explosion.png');
 
@@ -59,6 +63,21 @@ export class PlayScene extends Phaser.Scene {
     }
 
     create() {
+        // Animaciones
+        this.anims.create({
+            key: 'backgroundAnim',
+            frames: this.anims.generateFrameNumbers('background', { start: 0, end: 2 }),
+            frameRate: 5,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'gachaAnim',
+            frames: this.anims.generateFrameNumbers('gacha', { start: 0, end: 18 }),
+            frameRate: 5,
+            repeat: -1
+        });
+        this.add.sprite(683, 512, 'background').play('backgroundAnim');
+        this.add.sprite(1260, 350, 'gacha');
         // Reset de hatsManager
         GameManager.instance.hatsManager.reset();
 
@@ -76,11 +95,10 @@ export class PlayScene extends Phaser.Scene {
         this.deletedIDFlag; // Bandera para evitar que update elimine miles de veces el mismo objeto
         this.gamePaused = false;
         this.spawnEvent = null; // Evento de spawneo de objetos
-        // Fondo
-        this.add.image(width / 2, height / 2, 'background').setDisplaySize(width, height);
+
 
         // Limites en pantalla de físicas
-        this.matter.world.setBounds(0, 0, width, height, 20, true, true, true, true, {
+        this.matter.world.setBounds(21, 23, 1113, 1001, 20, true, true, true, true, {
             collisionFilter: {
                 category: this.boundsCategory
             }
@@ -88,9 +106,11 @@ export class PlayScene extends Phaser.Scene {
         this.worldBoundsVariable = this.matter.world.bounds;
 
         // Zona de clickeo
-        const leftZone = this.add.zone(200, 300, 400, 600);
+
+        const leftZone = this.add.zone(300, 512, 552, 980);
         leftZone.setInteractive();
-        const rightZone = this.add.zone(600, 300, 400, 600);
+
+        const rightZone = this.add.zone(845, 512, 537, 980);
         rightZone.setInteractive();
 
         // Efectos de sonido
@@ -101,13 +121,13 @@ export class PlayScene extends Phaser.Scene {
         this.explosionSound = this.sound.add('explosionSound');
 
         // Crear jugador (Las fisicas se declaran en el update llamando al metodo playermatter())
-        this.player = this.matter.add.image(width / 2, height - 300, 'cat').setDepth(5);
+        this.player = this.matter.add.image(566, height - 300, 'cat').setDepth(5);
         this.player.setIgnoreGravity(true);
         this.player.setCollisionCategory(this.playerCategory);
         this.player.setCollidesWith(this.platformCategory || this.pointCategory); // Define con qué categorías puede colisionar
 
         // Límite inferior del mundo
-        this.bottomLimit = this.matter.add.image(width / 2, height, 'bottomLimit').setDepth(5);
+        this.bottomLimit = this.matter.add.image(573, height, 'bottomLimit').setDepth(5);
         this.bottomLimit.setStatic(true);
 
         // Obtener tamaño del gato para redimensionar los otros objetos proporcionalmente
@@ -115,7 +135,7 @@ export class PlayScene extends Phaser.Scene {
         this.catHeight = this.player.height;
 
         // Crear plataforma y configurar colisiones
-        this.platform = this.matter.add.sprite(400, 0, 'platformCorrected', null, {
+        this.platform = this.matter.add.sprite(683, 0, 'platformCorrected', null, {
             isStatic: false,
             density: 0.015,  // Efecto de peso
             frictionAir: 0.02
@@ -125,7 +145,7 @@ export class PlayScene extends Phaser.Scene {
 
         // Centro de gravedad (Ancla el objeto a un punto del mundo)
         this.matter.add.worldConstraint(this.platform, 0, 0.7, {
-            pointA: { x: 400, y: 500 }, // Punto de anclaje en el mundo
+            pointA: { x: 573, y: 900 }, // Punto de anclaje en el mundo
             pointB: { x: 0, y: 0 }, // Posición del punto relativa a la posición de la plataforma
             stiffness: 0.9,
         });
@@ -258,7 +278,7 @@ export class PlayScene extends Phaser.Scene {
         this.playerFlag = false;
         this.player.setIgnoreGravity(false);
         this.player.setCircle(); // Collider figura
-        this.player.setDensity(0.2); // Efecto de peso
+        this.player.setDensity(0.05); // Efecto de peso
         this.player.setBounce(0.2);
         this.player.setFriction(0, 0);
         this.player.setVelocity(5, 5);
@@ -571,13 +591,13 @@ export class PlayScene extends Phaser.Scene {
 
     spawnObject() {
         const width = GameManager.instance.width;
-        const randomX = Phaser.Math.Between(100, width - 100);
+        const randomX = Phaser.Math.Between(23, 1092);
         const randomType = this.getRandomObjectType();
         let object;
 
         switch (randomType) {
             case 'points':
-                object = this.matter.add.sprite(randomX, 0, 'pointObj');
+                object = this.matter.add.sprite(randomX, 23, 'pointObj');
                 object.setDisplaySize(20, 20);
                 object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'points';
@@ -586,7 +606,7 @@ export class PlayScene extends Phaser.Scene {
                 object.setCollidesWith([this.playerCategory]);
                 break;
             case 'damage':
-                object = this.matter.add.sprite(randomX, 0, 'damageObj');
+                object = this.matter.add.sprite(randomX, 23, 'damageObj');
                 object.setDisplaySize(20, 20);
                 object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'damage';
@@ -595,7 +615,7 @@ export class PlayScene extends Phaser.Scene {
                 object.setCollidesWith([this.playerCategory]);
                 break;
             case 'health':
-                object = this.matter.add.sprite(randomX, 0, 'healthObj');
+                object = this.matter.add.sprite(randomX, 23, 'healthObj');
                 object.setDisplaySize(20, 20);
                 object.setBody({ type: 'circle', radius: 8 });
                 object.objectType = 'health';
