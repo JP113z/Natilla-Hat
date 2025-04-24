@@ -34,9 +34,9 @@ export class PlayScene extends Phaser.Scene {
     preload() {
         // Srpites
         this.load.image('cat', 'assets/newAssets/player.png');
-        this.load.image('pointObj', 'assets/images/point.png');
-        this.load.image('damageObj', 'assets/images/damage.png');
-        this.load.image('healthObj', 'assets/images/health.png');
+        this.load.image('pointObj', 'assets/newAssets/pointObj.png');
+        this.load.image('damageObj', 'assets/newAssets/damageObj.png');
+        this.load.image('healthObj', 'assets/newAssets/healthObj.png');
         this.load.image('leftBtn', 'assets/images/Left.png');
         this.load.image('rightBtn', 'assets/images/Right.png');
         this.load.image('platformCorrected', 'assets/newAssets/platform.png');
@@ -76,10 +76,11 @@ export class PlayScene extends Phaser.Scene {
             key: 'gachaAnim',
             frames: this.anims.generateFrameNumbers('gacha', { start: 0, end: 18 }),
             frameRate: 5,
-            repeat: -1
+            repeat: 1
         });
         this.add.sprite(683, 512, 'background').play('backgroundAnim');
-        this.add.sprite(1260, 350, 'gacha');
+        this.gachaSprite = this.add.sprite(1260, 350, 'gacha');
+        this.gachaSprite.setInteractive();
         // Reset de hatsManager
         GameManager.instance.hatsManager.reset();
 
@@ -319,7 +320,7 @@ export class PlayScene extends Phaser.Scene {
             // Solo crear el evento de spawneo una vez
             if (!this.spawnEvent) {
                 this.spawnEvent = this.time.addEvent({
-                    delay: 300,
+                    delay: 150,
                     callback: this.spawnObject,
                     callbackScope: this,
                     loop: true
@@ -425,33 +426,8 @@ export class PlayScene extends Phaser.Scene {
 
     createHatButton() {
         const width = GameManager.instance.width;
-
-        // Botón para obtener sombreros
-        this.hatButton = this.add.image(width - 100, 50, 'hatButton')
-            .setScale(0.7)
-            .setInteractive({ useHandCursor: true })
-            .setVisible(false);
-
-        // Texto del botón
-        this.hatButtonText = this.add.text(width - 100, 50, '', {
-            fontSize: '16px',
-            fill: '#FFFFFF',
-            align: 'center',
-            stroke: '#000000',
-            strokeThickness: 4
-        }).setOrigin(0.5).setVisible(false);
-
-        // Animación de pulso para el botón
-        this.tweens.add({
-            targets: [this.hatButton, this.hatButtonText],
-            scale: { from: 0.65, to: 0.75 },
-            duration: 800,
-            yoyo: true,
-            repeat: -1
-        });
-
         // Evento de click en el botón
-        this.hatButton.on('pointerdown', () => {
+        this.gachaSprite.on('pointerdown', () => {
             if (this.unusedPoints >= 50) {
                 this.getNewHat();
             }
@@ -461,14 +437,13 @@ export class PlayScene extends Phaser.Scene {
     updateHatButton() {
         // Mostrar u ocultar el botón según los puntos no usados
         const visible = this.unusedPoints >= 50;
-        this.hatButton.setVisible(visible);
-        this.hatButtonText.setVisible(visible);
+
 
         if (visible) {
             // Hacer que el botón destaque
             if (!this.hatButtonTween) {
                 this.hatButtonTween = this.tweens.add({
-                    targets: [this.hatButton, this.hatButtonText],
+                    targets: [this.gachaSprite],
                     angle: { from: -5, to: 5 },
                     duration: 500,
                     yoyo: true,
@@ -478,55 +453,58 @@ export class PlayScene extends Phaser.Scene {
         } else if (this.hatButtonTween) {
             this.hatButtonTween.stop();
             this.hatButtonTween = null;
-            this.hatButton.angle = 0;
-            this.hatButtonText.angle = 0;
+            this.gachaSprite.angle = 0;
         }
     }
 
     getNewHat() {
-        if (this.unusedPoints >= 50) {
-            // Verificar si todos los sombreros ya fueron obtenidos
-            if (GameManager.instance.hatsManager.areAllHatsMaxed()) {
-                this.showFloatingText(
-                    this.player.x,
-                    this.player.y - 50,
-                    "¡Ya tienes todos los sombreros!",
-                    0xFFD700
-                );
-                return; // No hacer nada más
+        this.gachaSprite.play('gachaAnim'); // Reproducir animación de gacha
+        setTimeout(() => {
+            this.gachaSprite.stop();
+            if (this.unusedPoints >= 50) {
+                // Verificar si todos los sombreros ya fueron obtenidos
+                if (GameManager.instance.hatsManager.areAllHatsMaxed()) {
+                    this.showFloatingText(
+                        this.player.x,
+                        this.player.y - 50,
+                        "¡Ya tienes todos los sombreros!",
+                        0xFFD700
+                    );
+                    return; // No hacer nada más
+                }
+
+                this.unusedPoints -= 50;
+
+                // Pausar el juego antes de mostrar el sombrero
+                this.pauseGameSafely();
+
+                // Obtener un sombrero aleatorio
+                const hat = GameManager.instance.hatsManager.getRandomHat();
+
+                // Si es un mensaje especial (id = -1), mostrar mensaje especial
+                if (hat.id === -1) {
+                    this.showFloatingText(
+                        this.player.x,
+                        this.player.y - 50,
+                        "¡Colección de sombreros completa!",
+                        0xFFD700
+                    );
+                    this.resumeGameSafely();
+                    return;
+                }
+
+                // Reproducir sonido
+                this.hatSound.play();
+
+                // Mostrar mensaje con el sombrero obtenido
+                this.showHatMessage(hat);
+
+                // Actualizar HUD y efectos
+                this.updatePlayerStats();
+
+                this.updateHatIcons();
             }
-
-            this.unusedPoints -= 50;
-
-            // Pausar el juego antes de mostrar el sombrero
-            this.pauseGameSafely();
-
-            // Obtener un sombrero aleatorio
-            const hat = GameManager.instance.hatsManager.getRandomHat();
-
-            // Si es un mensaje especial (id = -1), mostrar mensaje especial
-            if (hat.id === -1) {
-                this.showFloatingText(
-                    this.player.x,
-                    this.player.y - 50,
-                    "¡Colección de sombreros completa!",
-                    0xFFD700
-                );
-                this.resumeGameSafely();
-                return;
-            }
-
-            // Reproducir sonido
-            this.hatSound.play();
-
-            // Mostrar mensaje con el sombrero obtenido
-            this.showHatMessage(hat);
-
-            // Actualizar HUD y efectos
-            this.updatePlayerStats();
-
-            this.updateHatIcons();
-        }
+        }, 1000);
     }
 
     showHatMessage(hat) {
