@@ -4,12 +4,19 @@ import { GameManager } from "../gameManager.js";
 export class PlayScene extends Phaser.Scene {
     constructor() {
         super('PlayScene');
-        console.log(this);
+
+        // Solo mantén aquí variables que NO necesiten reiniciarse entre juegos
+        // o configuraciones iniciales que sean constantes
+    }
+
+    init(data) {
+        // Reiniciar todas las variables al iniciar la escena
+        console.log('Iniciando PlayScene');
         this.player = null;
         this.platform = null;
-        this.score = 49
-        this.unusedPoints = 49; // Puntos sin usar para obtener sombreros
-        this.health = 10;
+        this.score = 49;
+        this.unusedPoints = 49;
+        this.health = 1;
         this.maxHealth = 10;
         this.hatButton = null;
         this.hatButtonText = null;
@@ -26,9 +33,18 @@ export class PlayScene extends Phaser.Scene {
         };
         this.fallSpeed = 100;
         this.objectsToRemove = [];
-        this.objectScale = 0.1; // Tamaño de los objetos que caen
-        this.hatSlots = []; // Array para guardar los slots de sombreros
-        this.hatIcons = []; // Array para guardar los iconos de sombreros mostrados
+        this.objectScale = 0.1;
+        this.hatSlots = [];
+        this.hatIcons = [];
+
+        // Flags importantes
+        this.clicked = false;
+        this.playerFlag = false;
+        this.platformFlag = false;
+        this.gamePaused = false;
+        this.spawnEvent = null;
+        this.deletedIDFlag = null;
+        this.explosionInProgress = false;
     }
 
     preload() {
@@ -379,37 +395,37 @@ export class PlayScene extends Phaser.Scene {
     createHUD() {
         // Texto de puntuación
         this.scoreText = this.add.text(
-            20, 20,
+            25, 30,
             `Puntos: ${this.score}`,
-            { fontSize: '24px', fill: '#000' }
+            { fontSize: '15px', fill: '#000' }
         );
 
         // Texto de puntos sin usar
         this.unusedPointsText = this.add.text(
             20, 50,
             `Puntos sin usar: ${this.unusedPoints}`,
-            { fontSize: '24px', fill: '#000' }
+            { fontSize: '15px', fill: '#000' }
         );
 
         // Texto de salud
         this.healthText = this.add.text(
             20, 80,
             `Salud: ${this.health}/${this.maxHealth}`,
-            { fontSize: '24px', fill: '#000' }
+            { fontSize: '15px', fill: '#000' }
         );
 
         // Texto de sombreros
         this.hatsText = this.add.text(
             20, 110,
             `Sombreros: ${GameManager.instance.hatsManager.totalHats}`,
-            { fontSize: '24px', fill: '#000' }
+            { fontSize: '15px', fill: '#000' }
         );
 
         // Texto de protección
         this.protectionText = this.add.text(
             20, 140,
             `Protección: ${GameManager.instance.hatsManager.protectionRemaining}`,
-            { fontSize: '24px', fill: '#000' }
+            { fontSize: '15px', fill: '#000' }
         );
     }
 

@@ -12,15 +12,15 @@ export class EndScene extends Phaser.Scene {
 
     preload() {
         this.load.image('endBg', './assets/images/menu_bg.png');
-        this.load.image('playAgainBtn', './assets/images/playBtn.png');
+        this.load.image('playAgainBtn', './assets/images/playAgainBtn.png');
         this.load.image('menuBtn', './assets/images/menuBtn.png');
 
         // Cargar imágenes de sombreros para el resumen
-        this.load.image('hat1', 'assets/images/hat1.png');
-        this.load.image('hat2', 'assets/images/hat2.png');
-        this.load.image('hat3', 'assets/images/hat3.png');
-        this.load.image('hat4', 'assets/images/hat4.png');
-        this.load.image('hat5', 'assets/images/hat5.png');
+        this.load.image('hat1', 'assets/newAssets/protectiveHat.png');
+        this.load.image('hat2', 'assets/newAssets/explosiveHat.png');
+        this.load.image('hat3', 'assets/newAssets/healHat.png');
+        this.load.image('hat4', 'assets/newAssets/luffyHat.png');
+        this.load.image('hat5', 'assets/newAssets/ultraRareHat.png');
 
         // Sonidos
         this.load.audio('endMusic', './assets/sound/end_music.mp3');
@@ -70,78 +70,139 @@ export class EndScene extends Phaser.Scene {
         // Resumen de sombreros
         this.showHatsCollection();
 
-        // Botón jugar de nuevo
+        // Botón jugar de nuevo (solo sprite, sin texto)
         const playAgainBtn = this.add.sprite(width / 2, height - 120, 'playAgainBtn')
             .setScale(1.5)
             .setInteractive({ useHandCursor: true });
 
-        // Texto del botón
-        const playAgainText = this.add.text(width / 2, height - 120, '', {
-            fontSize: '24px',
-            color: '#FFFFFF',
-            stroke: '#000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-
-        // Botón menú principal
+        // Botón menú principal (solo sprite, sin texto)
         const menuBtn = this.add.sprite(width / 2, height - 60, 'menuBtn')
             .setScale(1.5)
             .setInteractive({ useHandCursor: true });
 
-        // Texto del botón
-        const menuText = this.add.text(width / 2, height - 60, '', {
-            fontSize: '24px',
-            color: '#FFFFFF',
-            stroke: '#000',
-            strokeThickness: 3
-        }).setOrigin(0.5);
-
         // Efectos para los botones
         playAgainBtn.on('pointerover', () => {
             playAgainBtn.setScale(1.6);
-            playAgainText.setScale(1.1);
         });
 
         playAgainBtn.on('pointerout', () => {
             playAgainBtn.setScale(1.5);
-            playAgainText.setScale(1.0);
         });
 
         menuBtn.on('pointerover', () => {
             menuBtn.setScale(1.6);
-            menuText.setScale(1.1);
         });
 
         menuBtn.on('pointerout', () => {
             menuBtn.setScale(1.5);
-            menuText.setScale(1.0);
         });
 
-        // Eventos de los botones
+        // Eventos de los botones con transiciones corregidas
         playAgainBtn.on('pointerdown', () => {
             this.clickSound.play();
-            this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(500, () => {
-                this.endMusic.stop();
+
+            // Primero detener la música
+            this.endMusic.stop();
+
+            // Crear transición más corta
+            this.cameras.main.fadeOut(300, 0, 0, 0);
+
+            // Esperar a que termine la transición antes de cambiar de escena
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                // Limpiar recursos antes de cambiar de escena
+                this.cleanupResources();
+
+                // Reiniciar el estado global del juego
+                if (GameManager.instance) {
+                    // Reiniciar el manager de sombreros
+                    if (GameManager.instance.hatsManager) {
+                        GameManager.instance.hatsManager.reset();
+                    }
+
+                    // Reiniciar otros estados globales si es necesario
+                    // ...
+                }
+
+                // Detener esta escena explícitamente
+                this.scene.stop('EndScene');
+
+                // Iniciar nueva escena
                 this.scene.start('PlayScene');
             });
         });
 
         menuBtn.on('pointerdown', () => {
             this.clickSound.play();
-            this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(500, () => {
-                this.endMusic.stop();
+
+            // Primero detener la música
+            this.endMusic.stop();
+
+            // Crear transición más corta
+            this.cameras.main.fadeOut(300, 0, 0, 0);
+
+            // Esperar a que termine la transición antes de cambiar de escena
+            this.cameras.main.once('camerafadeoutcomplete', () => {
+                // Limpiar recursos antes de cambiar de escena
+                this.cleanupResources();
+
+                // Detener esta escena explícitamente
+                this.scene.stop('EndScene');
+
+                // Iniciar escena del menú
                 this.scene.start('MenuScene');
             });
         });
+    }
+
+    // Nuevo método para limpiar recursos de manera segura
+    cleanupResources() {
+        // Detener cualquier música o sonido activo de forma segura
+        if (this.sound && this.sound.sounds) {
+            this.sound.sounds.forEach(sound => {
+                if (sound.isPlaying) {
+                    sound.stop();
+                }
+            });
+        }
+
+        // Detener cualquier animación en curso
+        if (this.tweens) {
+            this.tweens.killAll();
+        }
+
+        // Asegurarnos de que no queden eventos pendientes
+        if (this.time) {
+            this.time.removeAllEvents();
+        }
+
+        // Asegurarse de que el contexto de física está limpio
+        if (this.matter && this.matter.world) {
+            this.matter.world.off('collisionstart'); // Eliminar listeners
+            this.matter.world.off('beforeupdate');
+        }
+
+        // Eliminar todos los objetos de la escena si es necesario
+        this.children.each(child => {
+            if (child.destroy) {
+                child.destroy();
+            }
+        });
+    }
+
+    shutdown() {
+        this.cleanupResources();
+
+        // Desregistrarse de eventos globales si existen
+        if (this.input) {
+            this.input.off('pointerup');
+        }
     }
 
     showHatsCollection() {
         const width = GameManager.instance.width;
         const hatsManager = GameManager.instance.hatsManager;
 
-        if (hatsManager.totalHats === 0) {
+        if (!hatsManager || hatsManager.totalHats === 0) {
             // No se obtuvieron sombreros
             this.add.text(width / 2, 280, 'No obtuviste ningún sombrero', {
                 fontSize: '20px',
@@ -193,7 +254,8 @@ export class EndScene extends Phaser.Scene {
         }
     }
 
+    // Asegurarnos de limpiar todos los recursos al salir de la escena
     shutdown() {
-        this.endMusic.stop();
+        this.cleanupResources();
     }
 }
