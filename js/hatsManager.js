@@ -12,7 +12,7 @@ export class hatsManager {
             {
                 id: 2,
                 name: "Sombrero Explosivo",
-                description: "Genera una explosión cada 25 puntos (aumenta con cada sombrero)",
+                description: "Genera una explosión cada 10 puntos (aumenta con cada sombrero)",
                 rarity: "poco común",
                 chance: 0.25, // 25% de probabilidad
                 image: 'hat2'
@@ -48,7 +48,7 @@ export class hatsManager {
         this.pointMultiplier = 1; // Multiplicador de puntos (para el sombrero tipo 5)
         this.protectionRemaining = 0; // Golpes restantes protegidos (para el sombrero tipo 1)
         this.explosionCounter = 0; // Contador para la explosión (para el sombrero tipo 2)
-        this.pointsToExplosion = 15; // Puntos necesarios para generar explosión
+        this.pointsToExplosion = 10; // Puntos necesarios para generar explosión
     }
 
     // Obtiene un sombrero aleatorio según las probabilidades

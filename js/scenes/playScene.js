@@ -14,9 +14,9 @@ export class PlayScene extends Phaser.Scene {
         console.log('Iniciando PlayScene');
         this.player = null;
         this.platform = null;
-        this.score = 49;
-        this.unusedPoints = 49;
-        this.health = 1;
+        this.score = 0;
+        this.unusedPoints = 0;
+        this.health = 10;
         this.maxHealth = 10;
         this.hatButton = null;
         this.hatButtonText = null;
@@ -27,8 +27,8 @@ export class PlayScene extends Phaser.Scene {
             health: []
         };
         this.spawnRates = {
-            points: 0.6,
-            damage: 0.3,
+            points: 0.7,
+            damage: 0.2,
             health: 0.2
         };
         this.fallSpeed = 100;
@@ -65,12 +65,12 @@ export class PlayScene extends Phaser.Scene {
         // Cargar imágenes de sombreros
         this.load.image('hat1', 'assets/newAssets/protectiveHat.png');
         this.load.image('hat2', 'assets/newAssets/explosiveHat.png');
-        this.load.image('hat3', 'assets/newAssets/healHat.png');
-        this.load.image('hat4', 'assets/newAssets/luffyHat.png');
+        this.load.image('hat3', 'assets/newAssets/luffyHat.png');
+        this.load.image('hat4', 'assets/newAssets/healHat.png');
         this.load.image('hat5', 'assets/newAssets/ultraRareHat.png');
 
         this.load.image('hatButton', 'assets/images/hatButton.png');
-        this.load.image('explosion', 'assets/images/explosion.png');
+        this.load.image('explosion', 'assets/newAssets/explosion.png');
 
         // Sonidos
         this.load.audio('pointSound', './assets/sound/point.mp3');
@@ -444,7 +444,7 @@ export class PlayScene extends Phaser.Scene {
         const width = GameManager.instance.width;
         // Evento de click en el botón
         this.gachaSprite.on('pointerdown', () => {
-            if (this.unusedPoints >= 50) {
+            if (this.unusedPoints >= 20) {
                 this.getNewHat();
             }
         });
@@ -452,7 +452,7 @@ export class PlayScene extends Phaser.Scene {
 
     updateHatButton() {
         // Mostrar u ocultar el botón según los puntos no usados
-        const visible = this.unusedPoints >= 50;
+        const visible = this.unusedPoints >= 20;
 
 
         if (visible) {
@@ -477,7 +477,7 @@ export class PlayScene extends Phaser.Scene {
         this.gachaSprite.play('gachaAnim'); // Reproducir animación de gacha
         setTimeout(() => {
             this.gachaSprite.stop();
-            if (this.unusedPoints >= 50) {
+            if (this.unusedPoints >= 20) {
                 // Verificar si todos los sombreros ya fueron obtenidos
                 if (GameManager.instance.hatsManager.areAllHatsMaxed()) {
                     this.showFloatingText(
@@ -489,7 +489,7 @@ export class PlayScene extends Phaser.Scene {
                     return; // No hacer nada más
                 }
 
-                this.unusedPoints -= 50;
+                this.unusedPoints -= 20;
 
                 // Pausar el juego antes de mostrar el sombrero
                 this.pauseGameSafely();
